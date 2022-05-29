@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 public class ActionHandlerService {
-    Logger logger = LoggerFactory.getLogger(LobbyService.class);
+    Logger logger = LoggerFactory.getLogger(ActionHandlerService.class);
     private final AtomicBoolean isReadingActions = new AtomicBoolean(false);
     private final BlockingQueue<Action> actionQueue = new LinkedBlockingQueue<>();
 
