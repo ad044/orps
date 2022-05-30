@@ -26,8 +26,8 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
-public class GameTests {
-    Logger logger = LoggerFactory.getLogger(GameTests.class);
+public class GameLogicTests {
+    Logger logger = LoggerFactory.getLogger(GameLogicTests.class);
     private Game game;
     private String gameUri;
     private final String PARENT_LOBBY_URI = "lobbyUri";
