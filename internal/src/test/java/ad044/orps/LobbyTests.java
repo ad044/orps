@@ -45,6 +45,21 @@ public class LobbyTests {
         this.lobby = lobbyService.createLobby(lobbyOwner);
     }
 
+    @Test
+    public void action_failsWhenLobbyDoesntExist() {
+        Action action = new Action("ADD_BOT", Category.LOBBY, Map.of("lobbyUri", "test"), lobbyOwner);
+
+        List<EventMessage> response = actionHandlerService.handleAction(action);
+        assertEquals(response.size(), 1);
+
+        EventMessage message = response.get(0);
+        assertEquals(message.getCategory(), Category.ERROR);
+        assertEquals(message.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
+
+        ErrorEvent event = (ErrorEvent) message.getEvent();
+        assertEquals(event.getId(), ErrorEvent.ID.LOBBY_NOT_FOUND);
+        assertEquals(event.getData().get("lobbyUri"), "test");
+    }
 
     @Test
     public void addsBot() {

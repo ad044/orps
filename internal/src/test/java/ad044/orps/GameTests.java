@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -56,6 +57,39 @@ public class GameTests {
         }
     }
 
+    @Test
+    public void action_failsWhenGameDoesntExist() {
+        Action action = new Action("SUBMIT_MOVE", Category.GAME, Map.of("gameUri", "test"), player1);
+
+        List<EventMessage> response = actionHandlerService.handleAction(action);
+        assertEquals(response.size(), 1);
+
+        EventMessage message = response.get(0);
+        assertEquals(message.getCategory(), Category.ERROR);
+        assertEquals(message.getRecipientUuids(), Collections.singletonList(player1.getUuid()));
+
+        ErrorEvent event = (ErrorEvent) message.getEvent();
+        assertEquals(event.getId(), ErrorEvent.ID.GAME_NOT_FOUND);
+        assertEquals(event.getData().get("gameUri"), "test");
+    }
+
+    @Test
+    public void action_failsWhenPlayerNotInGame() {
+        Player player3 = new Player(new OrpsUserDetails("player3", "player3uuid"));
+        Action action = new Action("SUBMIT_MOVE", Category.GAME, Map.of("gameUri", game.getUri()), player3);
+
+        List<EventMessage> response = actionHandlerService.handleAction(action);
+        assertEquals(response.size(), 1);
+
+        EventMessage message = response.get(0);
+        assertEquals(message.getCategory(), Category.ERROR);
+        assertEquals(message.getRecipientUuids(), Collections.singletonList(player3.getUuid()));
+
+        ErrorEvent event = (ErrorEvent) message.getEvent();
+        assertEquals(event.getId(), ErrorEvent.ID.PLAYER_NOT_IN_GAME);
+        assertEquals(event.getData().get("gameUri"), game.getUri());
+        assertEquals(event.getData().get("playerUuid"), player3.getUuid());
+    }
 
     @Test
     public void submitsMove() {
