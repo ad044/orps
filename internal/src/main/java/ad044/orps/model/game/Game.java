@@ -4,6 +4,7 @@ import ad044.orps.model.lobby.Lobby;
 import ad044.orps.model.user.BotUserDetails;
 import net.bytebuddy.utility.RandomString;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -32,13 +33,13 @@ public class Game {
     private long lastCountDownUpdateTime = -1;
 
     public Game(List<Player> players, GameSettings settings) {
-        this.players = players;
+        this.players = new ArrayList<>(players);
         this.settings = settings;
         this.parentLobbyUri = null;
     }
 
     public Game(List<Player> players, GameSettings settings, String parentLobbyUri) {
-        this.players = players;
+        this.players = new ArrayList<>(players);
         this.settings = settings;
         this.parentLobbyUri = parentLobbyUri;
     }
@@ -82,6 +83,10 @@ public class Game {
 
     public void removePlayer(String uuid) {
         players.removeIf(player -> player.getUuid().equals(uuid));
+    }
+
+    public void addPlayer(Player player) {
+        players.add(player);
     }
 
     public void startNextRound(long currTime) {
