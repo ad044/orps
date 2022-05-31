@@ -111,6 +111,17 @@ public class GameService {
         return game;
     }
 
+    public Game createGame(List<Player> players, GameSettings gameSettings) {
+        Game game = new Game(players, gameSettings);
+
+        gameSessions.put(game.getUri(), game);
+
+        logger.info(String.format("Created new game with URI: %s", game.getUri()));
+
+        return game;
+    }
+
+
     private List<EventMessage> getRoundResult(Game game) {
         List<EventMessage> messages = new ArrayList<>();
         game.getPlayers().forEach(player -> {
