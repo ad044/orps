@@ -4,29 +4,36 @@ import ad044.orps.model.user.OrpsAuthenticationToken;
 import ad044.orps.model.user.OrpsUserDetails;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
-import org.springframework.stereotype.Component;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.util.UUID;
 
-@Component
-public class AnonymousIdentityFilter extends AnonymousAuthenticationFilter {
+public class AnonymousIdentityFilter extends AbstractAuthenticationProcessingFilter {
     Logger logger = LoggerFactory.getLogger(AnonymousIdentityFilter.class);
 
-    private static final String ANONYMOUS_KEY = "ANON_CRPS_KEY";
-
-    public AnonymousIdentityFilter() {
-        super(ANONYMOUS_KEY);
+    public AnonymousIdentityFilter(AuthenticationManager authenticationManager) {
+        super("**", authenticationManager);
     }
 
     @Override
-    protected Authentication createAuthentication(HttpServletRequest request) {
-        OrpsUserDetails anonOrpsUserDetails =
-                new OrpsUserDetails("anonuser", UUID.randomUUID().toString());
-        logger.info(String.format("Authenticated new anonymous user with UUID: %s", anonOrpsUserDetails.getUuid()));
+    protected boolean requiresAuthentication(HttpServletRequest request, HttpServletResponse response) {
+        return SecurityContextHolder.getContext().getAuthentication() == null &&
+                super.requiresAuthentication(request, response);
+    }
 
-        return new OrpsAuthenticationToken(anonOrpsUserDetails);
+    @Override
+    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
+        OrpsUserDetails userDetails = new OrpsUserDetails("anonuser", UUID.randomUUID().toString());
+        OrpsAuthenticationToken token = new OrpsAuthenticationToken(userDetails);
+
+        logger.info(String.format("Authenticated new anonymous user with UUID: %s", userDetails.getUuid()));
+
+        return this.getAuthenticationManager().authenticate(token);
     }
 }
