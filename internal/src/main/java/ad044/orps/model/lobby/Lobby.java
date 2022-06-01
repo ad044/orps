@@ -76,9 +76,4 @@ public class Lobby {
         return members.stream()
                 .filter(member -> !(member instanceof BotUserDetails)).collect(Collectors.toList());
     }
-
-    public OrpsUserDetails getRandomNonBotMember() {
-        return getNonBotMembers()
-                .get(new Random().nextInt(members.size()));
-    }
 }

@@ -224,6 +224,29 @@ public class LobbyTests {
     }
 
     @Test
+    public void userLeavesWhileNoOtherPlayersInLobby() {
+        assertEquals(lobby.getMembers().size(), 1);
+
+        Map<String, String> data = Map.of("lobbyUri", lobby.getUri());
+        Action action = new Action("USER_LEAVE", Category.LOBBY, data, lobbyOwner);
+
+        List<EventMessage> messages = actionHandlerService.handleAction(action);
+
+        assertEquals(messages.size(), 1);
+
+        EventMessage memberLeaveMessage = messages.get(0);
+        assertEquals(memberLeaveMessage.getCategory(), Category.LOBBY);
+        assertEquals(memberLeaveMessage.getRecipientUuids(), lobby.getMembers().stream().map(OrpsUserDetails::getUuid).collect(Collectors.toList()));
+
+        LobbyEvent memberLeaveEvent = (LobbyEvent) memberLeaveMessage.getEvent();
+        assertEquals(memberLeaveEvent.getId(), LobbyEvent.ID.MEMBER_LEAVE);
+        assertEquals(memberLeaveEvent.getLobbyUri(), lobby.getUri());
+        assertEquals(memberLeaveEvent.getData().get("memberUuid"), lobbyOwner.getUuid());
+
+        assertEquals(lobby.getMembers().size(), 0);
+    }
+
+    @Test
     public void userLeavesAndOwnerGetsUpdated() {
         OrpsUserDetails newUser = new OrpsUserDetails("user1", "randomuuid");
         lobby.addMember(newUser);

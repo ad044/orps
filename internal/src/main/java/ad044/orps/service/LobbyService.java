@@ -111,14 +111,18 @@ public class LobbyService {
 
         List<EventMessage> messages = new ArrayList<>();
         if (lobby.isOwner(userThatLeftUuid)) {
-            OrpsUserDetails newOwner = lobby.getRandomNonBotMember();
+            List<OrpsUserDetails> nonBotMembers = lobby.getNonBotMembers();
 
-            lobby.setOwner(newOwner);
+            if (!nonBotMembers.isEmpty()) {
+                OrpsUserDetails newOwner = nonBotMembers.get(0);
 
-            LobbyEvent ownerUpdatedEvent = LobbyEvent.ownerUpdated(lobby.getUri(), newOwner.getUuid());
-            messages.add(EventMessage.lobby(lobby.getMembers(), ownerUpdatedEvent));
+                lobby.setOwner(newOwner);
 
-            logger.info(String.format("Set %s as lobby owner in %s", newOwner.getUuid(), lobby.getUri()));
+                LobbyEvent ownerUpdatedEvent = LobbyEvent.ownerUpdated(lobby.getUri(), newOwner.getUuid());
+                messages.add(EventMessage.lobby(lobby.getMembers(), ownerUpdatedEvent));
+
+                logger.info(String.format("Set %s as lobby owner in %s", newOwner.getUuid(), lobby.getUri()));
+            }
         }
 
         LobbyEvent memberLeaveEvent = LobbyEvent.memberLeave(lobby.getUri(), userThatLeftUuid);
