@@ -19,9 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -232,18 +230,7 @@ public class LobbyTests {
 
         List<EventMessage> messages = actionHandlerService.handleAction(action);
 
-        assertEquals(messages.size(), 1);
-
-        EventMessage memberLeaveMessage = messages.get(0);
-        assertEquals(memberLeaveMessage.getCategory(), Category.LOBBY);
-        assertEquals(memberLeaveMessage.getRecipientUuids(), lobby.getMembers().stream().map(OrpsUserDetails::getUuid).collect(Collectors.toList()));
-
-        LobbyEvent memberLeaveEvent = (LobbyEvent) memberLeaveMessage.getEvent();
-        assertEquals(memberLeaveEvent.getId(), LobbyEvent.ID.MEMBER_LEAVE);
-        assertEquals(memberLeaveEvent.getLobbyUri(), lobby.getUri());
-        assertEquals(memberLeaveEvent.getData().get("memberUuid"), lobbyOwner.getUuid());
-
-        assertEquals(lobby.getMembers().size(), 0);
+        assertEquals(messages.size(), 0);
     }
 
     @Test
@@ -714,5 +701,23 @@ public class LobbyTests {
         assertEquals(event3.getId(), ErrorEvent.ID.LOBBY_PARAMETER_VALUE_NOT_ALLOWED);
         assertEquals(event3.getData().get("lobbyUri"), lobby.getUri());
         assertEquals(event3.getData().get("message"), "Score goal value must be in range 1 <= n <= 50");
+    }
+
+    @Test
+    public void cleanupTest() {
+        List<Lobby> lobbies = new ArrayList<>();
+
+        for (int i = 0; i < 3; i++) {
+            Lobby lobby = lobbyService.createLobby(lobbyOwner);
+            lobby.deletionDate = Calendar.getInstance().getTimeInMillis();
+            lobbies.add(lobby);
+        }
+
+        lobbyService.lobbyCleanupTask();
+
+        lobbies.forEach(lobby -> {
+            Optional<Lobby> optionalLobby = lobbyService.getLobby(lobby.getUri());
+            assertTrue(optionalLobby.isEmpty());
+        });
     }
 }

@@ -12,6 +12,7 @@ public class Lobby {
     private final String uri = generateUri();
     private final LobbySettings settings;
     private boolean isGameOngoing = false;
+    public long deletionDate = -1;
     private OrpsUserDetails owner;
 
     public Lobby(OrpsUserDetails creator, LobbySettings settings) {

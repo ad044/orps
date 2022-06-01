@@ -15,6 +15,7 @@ import ad044.orps.util.ParseUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -29,6 +30,17 @@ public class LobbyService {
 
     @Autowired
     GameService gameService;
+
+    @Scheduled(fixedDelay = 1000 * 60)
+    public void lobbyCleanupTask() {
+        long currTime = Calendar.getInstance().getTimeInMillis();
+        lobbySessions.values().forEach(lobby -> {
+            if (lobby.deletionDate != -1 && currTime >= lobby.deletionDate) {
+                logger.info(String.format("Deleted lobby %s during cleanup.", lobby.getUri()));
+                lobbySessions.remove(lobby.getUri());
+            }
+        });
+    }
 
     public Lobby createLobby(OrpsUserDetails author) {
         LobbySettings settings = new LobbySettings(3, 5, true);
@@ -93,6 +105,8 @@ public class LobbyService {
             messages.add(EventMessage.lobby(lobby.getMembersExcept(author.getUuid()), joinEvent));
         }
 
+        lobby.deletionDate = -1;
+
         LobbyEvent receiveLobbyDataEvent = LobbyEvent.receiveLobbyData(lobby.getUri(), LobbyDTO.from(lobby));
         messages.add(EventMessage.lobby(author.getUuid(), receiveLobbyDataEvent));
 
@@ -106,23 +120,23 @@ public class LobbyService {
 
         lobby.removeMember(userThatLeftUuid);
 
-        // TODO Keep last action time or something similar inside Lobbies
-        // and have a process that checks for inactive ones, and deletes them if neccessary.
+        List<OrpsUserDetails> nonBotMembers = lobby.getNonBotMembers();
+
+        if (nonBotMembers.isEmpty()) {
+            lobby.deletionDate = Calendar.getInstance().getTimeInMillis() + 1000 * 60;
+            return Collections.emptyList();
+        }
 
         List<EventMessage> messages = new ArrayList<>();
-        if (lobby.isOwner(userThatLeftUuid)) {
-            List<OrpsUserDetails> nonBotMembers = lobby.getNonBotMembers();
+        if (lobby.isOwner(userThatLeftUuid) && !nonBotMembers.isEmpty()) {
+            OrpsUserDetails newOwner = nonBotMembers.get(0);
 
-            if (!nonBotMembers.isEmpty()) {
-                OrpsUserDetails newOwner = nonBotMembers.get(0);
+            lobby.setOwner(newOwner);
 
-                lobby.setOwner(newOwner);
+            LobbyEvent ownerUpdatedEvent = LobbyEvent.ownerUpdated(lobby.getUri(), newOwner.getUuid());
+            messages.add(EventMessage.lobby(lobby.getMembers(), ownerUpdatedEvent));
 
-                LobbyEvent ownerUpdatedEvent = LobbyEvent.ownerUpdated(lobby.getUri(), newOwner.getUuid());
-                messages.add(EventMessage.lobby(lobby.getMembers(), ownerUpdatedEvent));
-
-                logger.info(String.format("Set %s as lobby owner in %s", newOwner.getUuid(), lobby.getUri()));
-            }
+            logger.info(String.format("Set %s as lobby owner in %s", newOwner.getUuid(), lobby.getUri()));
         }
 
         LobbyEvent memberLeaveEvent = LobbyEvent.memberLeave(lobby.getUri(), userThatLeftUuid);
