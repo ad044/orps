@@ -11,6 +11,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.messaging.SessionConnectEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
 import java.security.Principal;
@@ -21,6 +22,17 @@ public class WebSocketEventListener {
     Logger logger = LoggerFactory.getLogger(WebSocketEventListener.class);
     @Autowired
     ActionHandlerService actionHandlerService;
+
+    @EventListener
+    public void handleSessionConnect(SessionConnectEvent event) {
+        SimpMessageHeaderAccessor headers = SimpMessageHeaderAccessor.wrap(event.getMessage());
+        Principal principal = headers.getUser();
+
+        if (principal != null) {
+            OrpsUserDetails user = (OrpsUserDetails) ((Authentication) principal).getPrincipal();
+            logger.info(String.format("User %s connected.", user.getUuid()));
+        }
+    }
 
     @EventListener
     public void handleSessionDisconnect(SessionDisconnectEvent event) {
