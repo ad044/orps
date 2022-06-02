@@ -1,5 +1,6 @@
-package ad044.orps.filter;
+package ad044.orps;
 
+import ad044.orps.filter.AnonymousIdentityFilter;
 import ad044.orps.service.OrpsAuthenticationProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
