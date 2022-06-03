@@ -131,14 +131,19 @@ public class GameService {
 
     private List<EventMessage> getRoundResult(Game game) {
         List<EventMessage> messages = new ArrayList<>();
+
+        List<Player> inactivePlayers = new ArrayList<>();
         game.getPlayers().forEach(player -> {
             if (player.move.equals(GameMove.NO_MOVE)) {
                 player.missedMoveCount++;
-
                 if (player.missedMoveCount == MISSED_MOVE_THRESHOLD) {
-                    messages.addAll(kickPlayer(game, player.getUuid()));
+                    inactivePlayers.add(player);
                 }
             }
+        });
+        inactivePlayers.forEach(inactivePlayer -> {
+            logger.info(String.format("Kicked player %s due to inactivity.", inactivePlayer.getUuid()));
+            messages.addAll(kickPlayer(game, inactivePlayer.getUuid()));
         });
 
         List<PlayerDTO> playerData = game.getPlayers().stream().map(PlayerDTO::from).collect(Collectors.toList());
@@ -160,7 +165,7 @@ public class GameService {
     }
 
     private List<EventMessage> kickPlayer(Game game, String kickedPlayerUuid) {
-        List<EventMessage> messages = handlePlayerLeave(game, kickedPlayerUuid);
+        List<EventMessage> messages = new ArrayList<>(handlePlayerLeave(game, kickedPlayerUuid));
 
         GameEvent gotKickedEvent = game.getParentLobbyUri()
                 .map(lobbyUri -> GameEvent.gotKicked(game.getUri(), lobbyUri))
