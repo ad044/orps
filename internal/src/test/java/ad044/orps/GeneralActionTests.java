@@ -16,6 +16,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -56,7 +57,7 @@ public class GeneralActionTests {
 
         EventMessage message = response.get(0);
         assertEquals(message.getCategory(), Category.GENERAL);
-        assertEquals(message.getRecipientUuids(), List.of(author.getUuid()));
+        assertEquals(message.getRecipientUuids().stream().distinct().collect(Collectors.toList()), List.of(author.getUuid()));
 
         GeneralEvent event = (GeneralEvent) message.getEvent();
         assertEquals(event.getId(), GeneralEvent.ID.USER_CHANGED_NAME);
