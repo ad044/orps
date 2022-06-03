@@ -1,6 +1,5 @@
-package ad044.orps.service;
+package ad044.orps.auth;
 
-import ad044.orps.model.user.OrpsAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;

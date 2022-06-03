@@ -1,5 +1,6 @@
-package ad044.orps.model.user;
+package ad044.orps.auth;
 
+import ad044.orps.model.user.OrpsUserDetails;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.messaging.simp.user.DestinationUserNameProvider;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
