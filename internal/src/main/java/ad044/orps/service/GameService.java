@@ -146,6 +146,11 @@ public class GameService {
             messages.addAll(kickPlayer(game, inactivePlayer.getUuid()));
         });
 
+        if (inactivePlayers.size() == game.getPlayers().size()) {
+            EventMessage message = endGamePrematurely(game, "Game ended because all players were inactive.");
+            return Collections.singletonList(message);
+        }
+
         List<PlayerDTO> playerData = game.getPlayers().stream().map(PlayerDTO::from).collect(Collectors.toList());
 
         game.getRoundWinner().ifPresentOrElse(winner -> {
@@ -162,6 +167,13 @@ public class GameService {
         });
 
         return messages;
+    }
+
+    private EventMessage endGamePrematurely(Game game, String reason) {
+        gameSessions.remove(game.getUri());
+
+        GameEvent event = GameEvent.endedPrematurely(game.getUri(), reason);
+        return EventMessage.game(game.getPlayers(), event);
     }
 
     private List<EventMessage> kickPlayer(Game game, String kickedPlayerUuid) {

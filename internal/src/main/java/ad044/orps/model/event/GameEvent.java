@@ -16,7 +16,8 @@ public class GameEvent extends Event<GameEvent.ID> {
         DISPLAY_AUTHOR_MOVE,
         PLAYER_MADE_MOVE,
         PLAYER_LEAVE,
-        GOT_KICKED
+        GOT_KICKED,
+        ENDED_PREMATURELY
     }
     private final String gameUri;
 
@@ -99,5 +100,12 @@ public class GameEvent extends Event<GameEvent.ID> {
 
     public static GameEvent gotKicked(String gameUri) {
         return new GameEvent(ID.GOT_KICKED, gameUri);
+    }
+
+    public static GameEvent endedPrematurely(String gameUri, String reason) {
+        GameEvent event = new GameEvent(ID.ENDED_PREMATURELY, gameUri);
+        event.putData("reason", reason);
+
+        return event;
     }
 }
