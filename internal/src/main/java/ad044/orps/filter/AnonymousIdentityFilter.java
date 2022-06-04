@@ -1,6 +1,6 @@
 package ad044.orps.filter;
 
-import ad044.orps.model.user.OrpsAuthenticationToken;
+import ad044.orps.auth.OrpsAuthenticationToken;
 import ad044.orps.model.user.OrpsUserDetails;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

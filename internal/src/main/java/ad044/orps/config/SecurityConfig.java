@@ -2,7 +2,7 @@ package ad044.orps.config;
 
 import ad044.orps.filter.AnonymousIdentityFilter;
 import ad044.orps.filter.FilterChainExceptionHandleFilter;
-import ad044.orps.service.OrpsAuthenticationProvider;
+import ad044.orps.auth.OrpsAuthenticationProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

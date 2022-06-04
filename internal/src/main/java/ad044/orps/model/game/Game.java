@@ -13,6 +13,8 @@ import java.util.stream.Collectors;
 public class Game {
     // CONSTANTS
     public final int SECONDS_BETWEEN_ROUNDS = 2;
+    // After this many rounds of not selecting a move, the player will get kicked.
+    public final int MISSED_MOVE_THRESHOLD = 3;
 
     // IMMUTABLE PROPS
     private final String uri = generateUri();
@@ -20,17 +22,12 @@ public class Game {
     private final GameSettings settings;
 
     // STATE
+    public int countDownValue = 5;
     private final List<Player> players;
-    private int countDownValue = 5;
     private Player roundWinner = null;
     private boolean finished = false;
     private boolean roundFinished = true;
     private int roundNumber = 0;
-
-    // TIMERS
-    private long nextRoundStartTime = -1;
-    private long roundFinishTime = -1;
-    private long lastCountDownUpdateTime = -1;
 
     public Game(List<Player> players, GameSettings settings) {
         this.players = new ArrayList<>(players);
@@ -57,8 +54,24 @@ public class Game {
         return players;
     }
 
+    public List<String> getPlayerUuids() {
+        return players.stream().map(Player::getUuid).collect(Collectors.toList());
+    }
+
+    public List<String> getPlayerUuidsExcept(String ignoredUuid) {
+        return players
+                .stream()
+                .map(Player::getUuid)
+                .filter(uuid -> !uuid.equals(ignoredUuid))
+                .collect(Collectors.toList());
+    }
+
     public List<Player> getPlayersExcept(String uuid) {
         return players.stream().filter(player -> !player.getUuid().equals(uuid)).collect(Collectors.toList());
+    }
+
+    public List<Player> getInactivePlayers() {
+        return players.stream().filter(player -> player.inactive).collect(Collectors.toList());
     }
 
     public Optional<Player> getPlayer(String uuid) {
@@ -89,12 +102,10 @@ public class Game {
         players.add(player);
     }
 
-    public void startNextRound(long currTime) {
+    public void startNextRound() {
         roundWinner = null;
 
         roundFinished = false;
-
-        roundFinishTime = currTime + getSettings().getTimeForMove() * 1000L;
 
         roundNumber++;
 
@@ -107,10 +118,8 @@ public class Game {
         });
     }
 
-    public void finishRound(long currTime) {
+    public void finishRound() {
         roundFinished = true;
-
-        nextRoundStartTime = currTime + SECONDS_BETWEEN_ROUNDS * 1000;
 
         Optional<Player> winner = determineWinner(players);
 
@@ -119,6 +128,18 @@ public class Game {
             winnerPlayer.score++;
             if (winnerPlayer.score == getSettings().getScoreGoal()) {
                 finished = true;
+            }
+        });
+
+        getPlayers().forEach(player -> {
+            if (player.move.equals(GameMove.NO_MOVE)) {
+                player.consecutiveMovesMissed++;
+                if (player.consecutiveMovesMissed == MISSED_MOVE_THRESHOLD) {
+                    player.inactive = true;
+                }
+            } else {
+                player.consecutiveMovesMissed = 0;
+                player.inactive = false;
             }
         });
     }
@@ -151,14 +172,6 @@ public class Game {
         return Optional.ofNullable(roundWinner);
     }
 
-    public long getRoundFinishTime() {
-        return roundFinishTime;
-    }
-
-    public long getNextRoundStartTime() {
-        return nextRoundStartTime;
-    }
-
     public boolean isFinished() {
         return finished;
     }
@@ -169,14 +182,5 @@ public class Game {
 
     public int getCountDownValue() {
         return countDownValue;
-    }
-
-    public void decrementCountDownValue(long currTime) {
-        countDownValue--;
-        lastCountDownUpdateTime = currTime;
-    }
-
-    public long getLastCountDownUpdateTime() {
-        return lastCountDownUpdateTime;
     }
 }

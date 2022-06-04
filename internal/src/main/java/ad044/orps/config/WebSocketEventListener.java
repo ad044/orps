@@ -3,7 +3,7 @@ package ad044.orps.config;
 import ad044.orps.model.action.Action;
 import ad044.orps.model.Category;
 import ad044.orps.model.user.OrpsUserDetails;
-import ad044.orps.service.ActionHandlerService;
+import ad044.orps.service.ActionDispatcherService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +21,7 @@ import java.util.HashMap;
 public class WebSocketEventListener {
     Logger logger = LoggerFactory.getLogger(WebSocketEventListener.class);
     @Autowired
-    ActionHandlerService actionHandlerService;
+    ActionDispatcherService actionDispatcherService;
 
     @EventListener
     public void handleSessionConnect(SessionConnectEvent event) {
@@ -49,7 +49,7 @@ public class WebSocketEventListener {
                     new HashMap<>(),
                     userThatLeft);
 
-            actionHandlerService.putAction(disconnectAction);
+            actionDispatcherService.putAction(disconnectAction);
         }
     }
 }

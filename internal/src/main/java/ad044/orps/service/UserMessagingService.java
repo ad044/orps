@@ -1,6 +1,6 @@
 package ad044.orps.service;
 
-import ad044.orps.model.message.EventMessage;
+import ad044.orps.model.event.Event;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -12,15 +12,15 @@ public class UserMessagingService {
     @Autowired
     SimpMessagingTemplate messagingTemplate;
 
-    public void sendEventMessage(EventMessage message) {
-        String topic = message.getCategory().getTextValue().toLowerCase();
-        message.getRecipientUuids().forEach(recipient -> {
-            sendSocketMessageToUser(recipient, topic, message.getEvent());
+    public void sendEvent(Event<?> event) {
+        String topic = event.getCategory().getTextValue().toLowerCase();
+        event.getRecipientUuids().forEach(recipient -> {
+            sendSocketMessageToUser(recipient, topic, event);
         });
     }
 
-    public void sendEventMessage(List<EventMessage> messages) {
-        messages.forEach(this::sendEventMessage);
+    public void sendEvent(List<Event<?>> events) {
+        events.forEach(this::sendEvent);
     }
 
     private void sendSocketMessageToUser(String uuid, String topic, Object message) {

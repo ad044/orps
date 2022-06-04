@@ -1,5 +1,7 @@
 package ad044.orps.model.action;
 
+import ad044.orps.model.lobby.Lobby;
+
 public class LobbyAction extends Action {
     public enum ID {
         ADD_BOT,
@@ -12,20 +14,20 @@ public class LobbyAction extends Action {
     }
 
     private final ID id;
-    private final String targetLobbyUri;
+    private final Lobby targetLobby;
 
-    public LobbyAction(Action action, ID id, String targetLobbyUri) {
+    public LobbyAction(Action action, ID id, Lobby targetLobby) {
         super(action.getIdString(), action.getCategory(), action.getData(), action.getAuthor());
 
         this.id = id;
-        this.targetLobbyUri = targetLobbyUri;
+        this.targetLobby = targetLobby;
     }
 
     public ID getId() {
         return id;
     }
 
-    public String getTargetLobbyUri() {
-        return targetLobbyUri;
+    public Lobby getTargetLobby() {
+        return targetLobby;
     }
 }

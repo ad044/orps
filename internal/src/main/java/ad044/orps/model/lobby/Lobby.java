@@ -33,9 +33,21 @@ public class Lobby {
         return members;
     }
 
+    public List<String> getMemberUuids() {
+        return members.stream().map(OrpsUserDetails::getUuid).collect(Collectors.toList());
+    }
+
     public List<OrpsUserDetails> getMembersExcept(String uuid) {
         return members.stream().filter(member -> !member.getUuid().equals(uuid)).collect(Collectors.toList());
     }
+
+    public List<String> getMemberUuidsExcept(String ignoredUuid) {
+        return members.stream()
+                .map(OrpsUserDetails::getUuid)
+                .filter(uuid -> !uuid.equals(ignoredUuid))
+                .collect(Collectors.toList());
+    }
+
 
     public void addMember(OrpsUserDetails user) {
         members.add(user);

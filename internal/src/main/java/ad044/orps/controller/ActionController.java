@@ -2,7 +2,7 @@ package ad044.orps.controller;
 
 import ad044.orps.model.action.Action;
 import ad044.orps.model.user.OrpsUserDetails;
-import ad044.orps.service.ActionHandlerService;
+import ad044.orps.service.ActionDispatcherService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.security.core.Authentication;
@@ -13,7 +13,7 @@ import java.security.Principal;
 @Controller
 public class ActionController {
     @Autowired
-    ActionHandlerService actionHandlerService;
+    ActionDispatcherService actionDispatcherService;
 
     @MessageMapping("/user-action")
     public void handleAction(Action action, Principal principal) {
@@ -21,6 +21,6 @@ public class ActionController {
 
         action.setAuthor(user);
 
-        actionHandlerService.putAction(action);
+        actionDispatcherService.putAction(action);
     }
 }

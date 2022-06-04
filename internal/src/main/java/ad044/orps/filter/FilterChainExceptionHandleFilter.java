@@ -1,7 +1,6 @@
 package ad044.orps.filter;
 
 import ad044.orps.model.event.ErrorEvent;
-import ad044.orps.model.message.EventMessage;
 import ad044.orps.model.user.OrpsUserDetails;
 import ad044.orps.service.UserMessagingService;
 import org.slf4j.Logger;
@@ -30,8 +29,8 @@ public class FilterChainExceptionHandleFilter extends OncePerRequestFilter {
             log.error("Caught Filter Chain Exception:", e);
             OrpsUserDetails userDetails = (OrpsUserDetails) ((Authentication)(request.getUserPrincipal())).getPrincipal();
 
-            EventMessage eventMessage = EventMessage.error(userDetails.getUuid(), ErrorEvent.somethingWentWrong());
-            userMessagingService.sendEventMessage(eventMessage);
+            ErrorEvent errorEvent = ErrorEvent.somethingWentWrong(userDetails.getUuid());
+            userMessagingService.sendEvent(errorEvent);
         }
     }
 }
