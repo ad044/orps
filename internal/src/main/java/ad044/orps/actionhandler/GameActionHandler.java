@@ -29,19 +29,7 @@ public class GameActionHandler {
     GameService gameService;
 
     private List<Event<?>> getRoundResult(Game game) {
-        List<Player> inactivePlayers = game.getInactivePlayers();
-
-        if (inactivePlayers.size() == game.getPlayers().size()) {
-            logger.info(String.format("Ended game %s prematurely because all players were inactive.", game.getUri()));
-            GameEvent event = endGamePrematurely(game, "Game ended because all players were inactive.");
-            return Collections.singletonList(event);
-        }
-
         List<Event<?>> events = new ArrayList<>();
-        inactivePlayers.forEach(inactivePlayer -> {
-            logger.info(String.format("Kicked player %s due to inactivity.", inactivePlayer.getUuid()));
-            events.addAll(kickPlayer(game, inactivePlayer.getUuid()));
-        });
 
         List<PlayerDTO> playerData = game.getPlayers().stream().map(PlayerDTO::from).collect(Collectors.toList());
 
@@ -51,7 +39,6 @@ public class GameActionHandler {
             events.add(roundResultEvent);
 
             if (game.isFinished()) {
-                logger.info(String.format("Game %s finished", game.getUri()));
                 GameEvent playerWonGameEvent = GameEvent.playerWonGame(game.getPlayerUuids(), game.getUri(), PlayerDTO.from(winner));
                 events.add(playerWonGameEvent);
             }
@@ -129,7 +116,20 @@ public class GameActionHandler {
     private ActionHandlerResponse handleFinishRound(Game game) {
         game.finishRound();
 
-        List<Event<?>> events = getRoundResult(game);
+        List<Player> inactivePlayers = game.getInactivePlayers();
+        if (inactivePlayers.size() == game.getPlayers().size()) {
+            logger.info(String.format("Ended game %s prematurely because all players were inactive.", game.getUri()));
+            GameEvent event = endGamePrematurely(game, "Game ended because all players were inactive.");
+            return new ActionHandlerResponse(event);
+        }
+
+        List<Event<?>> events = new ArrayList<>(getRoundResult(game));
+
+        inactivePlayers.forEach(inactivePlayer -> {
+            logger.info(String.format("Kicked player %s due to inactivity.", inactivePlayer.getUuid()));
+            events.addAll(kickPlayer(game, inactivePlayer.getUuid()));
+        });
+
         if (game.isFinished()) {
             gameService.removeGame(game.getUri());
             logger.info(String.format("Game %s finished", game.getUri()));
