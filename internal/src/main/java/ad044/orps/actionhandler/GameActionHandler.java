@@ -129,15 +129,18 @@ public class GameActionHandler {
     private ActionHandlerResponse handleFinishRound(Game game) {
         game.finishRound();
 
+        List<Event<?>> events = getRoundResult(game);
         if (game.isFinished()) {
             gameService.removeGame(game.getUri());
+            logger.info(String.format("Game %s finished", game.getUri()));
+            return new ActionHandlerResponse(events);
+        } else {
+            ServerAction updateCountdownAction = ServerAction.game("START_NEXT_ROUND", game.getUri());
+            ScheduledAction scheduledAction
+                    = new ScheduledAction(updateCountdownAction, Calendar.getInstance().getTimeInMillis() + 2500);
+
+            return new ActionHandlerResponse(events, scheduledAction);
         }
-
-        ServerAction updateCountdownAction = ServerAction.game("START_NEXT_ROUND", game.getUri());
-        ScheduledAction scheduledAction
-                = new ScheduledAction(updateCountdownAction, Calendar.getInstance().getTimeInMillis() + 2500);
-
-        return new ActionHandlerResponse(getRoundResult(game), scheduledAction);
     }
 
     private ActionHandlerResponse handleUpdateCountdown(Game game) {
