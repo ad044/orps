@@ -137,7 +137,7 @@ public class GameActionHandler {
         } else {
             ServerAction updateCountdownAction = ServerAction.game("START_NEXT_ROUND", game.getUri());
             ScheduledAction scheduledAction
-                    = new ScheduledAction(updateCountdownAction, Calendar.getInstance().getTimeInMillis() + 2500);
+                    = new ScheduledAction(updateCountdownAction, Calendar.getInstance().getTimeInMillis() + game.SECONDS_BETWEEN_ROUNDS * 1000);
 
             return new ActionHandlerResponse(events, scheduledAction);
         }
