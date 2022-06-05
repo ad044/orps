@@ -179,8 +179,4 @@ public class Game {
     public boolean isRoundFinished() {
         return roundFinished;
     }
-
-    public int getCountDownValue() {
-        return countDownValue;
-    }
 }

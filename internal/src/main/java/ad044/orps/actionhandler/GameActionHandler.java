@@ -144,7 +144,7 @@ public class GameActionHandler {
     }
 
     private ActionHandlerResponse handleUpdateCountdown(Game game) {
-        GameEvent countdownUpdateEvent = GameEvent.countdownUpdate(game.getPlayerUuids(), game.getUri(), game.getCountDownValue());
+        GameEvent countdownUpdateEvent = GameEvent.countdownUpdate(game.getPlayerUuids(), game.getUri(), game.countDownValue);
         game.countDownValue--;
 
         if (game.countDownValue >= 0) {
