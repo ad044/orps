@@ -3,14 +3,17 @@ package ad044.orps;
 import ad044.orps.dto.GameDTO;
 import ad044.orps.dto.LobbyDTO;
 import ad044.orps.dto.UserDTO;
+import ad044.orps.model.ActionHandlerResponse;
 import ad044.orps.model.Category;
 import ad044.orps.model.action.Action;
-import ad044.orps.model.event.ErrorEvent;
+import ad044.orps.model.action.ScheduledAction;
+import ad044.orps.model.action.ServerAction;
+import ad044.orps.model.event.Event;
 import ad044.orps.model.event.LobbyEvent;
 import ad044.orps.model.lobby.Lobby;
-import ad044.orps.model.message.EventMessage;
+import ad044.orps.model.event.Event;
 import ad044.orps.model.user.OrpsUserDetails;
-import ad044.orps.service.ActionHandlerService;
+import ad044.orps.service.ActionDispatcherService;
 import ad044.orps.service.LobbyService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,7 +35,7 @@ public class LobbyTests {
     private OrpsUserDetails lobbyOwner;
 
     @Autowired
-    ActionHandlerService actionHandlerService;
+    ActionDispatcherService actionDispatcherService;
 
     @Autowired
     LobbyService lobbyService;
@@ -47,15 +50,13 @@ public class LobbyTests {
     public void action_failsWhenLobbyDoesntExist() {
         Action action = new Action("ADD_BOT", Category.LOBBY, Map.of("lobbyUri", "test"), lobbyOwner);
 
-        List<EventMessage> response = actionHandlerService.handleAction(action);
-        assertEquals(response.size(), 1);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
+        assertEquals(events.size(), 1);
 
-        EventMessage message = response.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
+        Event<?> event = events.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
 
-        ErrorEvent event = (ErrorEvent) message.getEvent();
-        assertEquals(event.getId(), ErrorEvent.ID.LOBBY_NOT_FOUND);
         assertEquals(event.getData().get("lobbyUri"), "test");
     }
 
@@ -63,14 +64,12 @@ public class LobbyTests {
     public void addsBot() {
         Action action = new Action("ADD_BOT", Category.LOBBY, Map.of("lobbyUri", lobby.getUri()), lobbyOwner);
 
-        List<EventMessage> response = actionHandlerService.handleAction(action);
-        assertEquals(response.size(), 1);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
+        assertEquals(events.size(), 1);
 
-        EventMessage message = response.get(0);
-        assertEquals(message.getCategory(), Category.LOBBY);
-        assertEquals(message.getRecipientUuids(), lobby.getMembers().stream().map(OrpsUserDetails::getUuid).collect(Collectors.toList()));
-
-        LobbyEvent event = (LobbyEvent) message.getEvent();
+        LobbyEvent event = (LobbyEvent) events.get(0);
+        assertEquals(event.getCategory(), Category.LOBBY);
+        assertEquals(event.getRecipientUuids(), lobby.getMembers().stream().map(OrpsUserDetails::getUuid).collect(Collectors.toList()));
         assertEquals(event.getId(), LobbyEvent.ID.MEMBER_JOIN);
         assertTrue(((UserDTO) event.getData().get("memberData")).getUsername().startsWith("Bot"));
         assertTrue(((UserDTO) event.getData().get("memberData")).getUuid().startsWith("Bot"));
@@ -82,15 +81,13 @@ public class LobbyTests {
         OrpsUserDetails nonOwnerUser = new OrpsUserDetails("nonowner", "nonowneruuid");
         Action action = new Action("ADD_BOT", Category.LOBBY, Map.of("lobbyUri", lobby.getUri()), nonOwnerUser);
 
-        List<EventMessage> response = actionHandlerService.handleAction(action);
-        assertEquals(response.size(), 1);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
+        assertEquals(events.size(), 1);
 
-        EventMessage message = response.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), Collections.singletonList(nonOwnerUser.getUuid()));
+        Event<?> event = events.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), Collections.singletonList(nonOwnerUser.getUuid()));
 
-        ErrorEvent event = (ErrorEvent) message.getEvent();
-        assertEquals(event.getId(), ErrorEvent.ID.INSUFFICIENT_PERMISSIONS);
         assertEquals(event.getData().get("lobbyUri"), lobby.getUri());
     }
 
@@ -99,14 +96,12 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri(), "messageContent", "test");
         Action action = new Action("NEW_TEXT_MESSAGE", Category.LOBBY, data, lobbyOwner);
 
-        List<EventMessage> response = actionHandlerService.handleAction(action);
-        assertEquals(response.size(), 1);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
+        assertEquals(events.size(), 1);
 
-        EventMessage message = response.get(0);
-        assertEquals(message.getCategory(), Category.LOBBY);
-        assertEquals(message.getRecipientUuids(), lobby.getMembers().stream().map(OrpsUserDetails::getUuid).collect(Collectors.toList()));
-
-        LobbyEvent event = (LobbyEvent) message.getEvent();
+        LobbyEvent event = (LobbyEvent) events.get(0);
+        assertEquals(event.getCategory(), Category.LOBBY);
+        assertEquals(event.getRecipientUuids(), lobby.getMembers().stream().map(OrpsUserDetails::getUuid).collect(Collectors.toList()));
         assertEquals(event.getId(), LobbyEvent.ID.NEW_TEXT_MESSAGE);
         assertEquals(event.getData().get("messageContent"), "test");
         assertEquals(((UserDTO) event.getData().get("messageAuthor")).getUuid(), lobbyOwner.getUuid());
@@ -120,14 +115,12 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri(), "messageContent", "test");
         Action action = new Action("NEW_TEXT_MESSAGE", Category.LOBBY, data, nonOwnerUser);
 
-        List<EventMessage> response = actionHandlerService.handleAction(action);
-        assertEquals(response.size(), 1);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
+        assertEquals(events.size(), 1);
 
-        EventMessage message = response.get(0);
-        assertEquals(message.getCategory(), Category.LOBBY);
-        assertEquals(message.getRecipientUuids(), lobby.getMembers().stream().map(OrpsUserDetails::getUuid).collect(Collectors.toList()));
-
-        LobbyEvent event = (LobbyEvent) message.getEvent();
+        LobbyEvent event = (LobbyEvent) events.get(0);
+        assertEquals(event.getCategory(), Category.LOBBY);
+        assertEquals(event.getRecipientUuids(), lobby.getMembers().stream().map(OrpsUserDetails::getUuid).collect(Collectors.toList()));
         assertEquals(event.getId(), LobbyEvent.ID.NEW_TEXT_MESSAGE);
         assertEquals(event.getData().get("messageContent"), "test");
         assertEquals(((UserDTO) event.getData().get("messageAuthor")).getUuid(), nonOwnerUser.getUuid());
@@ -140,15 +133,13 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri(), "messageContent", "test");
         Action action = new Action("NEW_TEXT_MESSAGE", Category.LOBBY, data, nonOwnerUser);
 
-        List<EventMessage> response = actionHandlerService.handleAction(action);
-        assertEquals(response.size(), 1);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
+        assertEquals(events.size(), 1);
 
-        EventMessage message = response.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), Collections.singletonList(nonOwnerUser.getUuid()));
+        Event<?> event = events.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), Collections.singletonList(nonOwnerUser.getUuid()));
 
-        ErrorEvent event = (ErrorEvent) message.getEvent();
-        assertEquals(event.getId(), ErrorEvent.ID.USER_NOT_IN_LOBBY);
         assertEquals(event.getData().get("lobbyUri"), lobby.getUri());
     }
 
@@ -157,15 +148,13 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri());
         Action action = new Action("NEW_TEXT_MESSAGE", Category.LOBBY, data, lobbyOwner);
 
-        List<EventMessage> response = actionHandlerService.handleAction(action);
-        assertEquals(response.size(), 1);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
+        assertEquals(events.size(), 1);
 
-        EventMessage message = response.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
+        Event<?> event = events.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
 
-        ErrorEvent event = (ErrorEvent) message.getEvent();
-        assertEquals(event.getId(), ErrorEvent.ID.DATA_FIELD_MISSING);
         assertEquals(event.getData().get("fieldName"), "messageContent");
     }
 
@@ -174,15 +163,13 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri(), "messageContent", "");
         Action action = new Action("NEW_TEXT_MESSAGE", Category.LOBBY, data, lobbyOwner);
 
-        List<EventMessage> response = actionHandlerService.handleAction(action);
-        assertEquals(response.size(), 1);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
+        assertEquals(events.size(), 1);
 
-        EventMessage message = response.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
+        Event<?> event = events.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
 
-        ErrorEvent event = (ErrorEvent) message.getEvent();
-        assertEquals(event.getId(), ErrorEvent.ID.BAD_TEXT_MESSAGE);
         assertEquals(event.getData().get("reason"), "Message can't be empty.");
         assertEquals(event.getData().get("lobbyUri"), lobby.getUri());
     }
@@ -193,27 +180,23 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri());
         Action action = new Action("USER_JOIN", Category.LOBBY, data, newUser);
 
-        List<EventMessage> response = actionHandlerService.handleAction(action);
-        assertEquals(response.size(), 2);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
+        assertEquals(events.size(), 2);
 
-        EventMessage joinMessage = response.get(0);
-        assertEquals(joinMessage.getCategory(), Category.LOBBY);
-        assertEquals(joinMessage.getRecipientUuids(), lobby.getMembers()
+        LobbyEvent joinEvent = (LobbyEvent) events.get(0);
+        assertEquals(joinEvent.getCategory(), Category.LOBBY);
+        assertEquals(joinEvent.getRecipientUuids(), lobby.getMembers()
                 .stream()
                 .map(OrpsUserDetails::getUuid)
                 .filter(uuid -> !uuid.equals("randomuuid"))
                 .collect(Collectors.toList()));
-
-        LobbyEvent joinEvent = (LobbyEvent) joinMessage.getEvent();
         assertEquals(joinEvent.getId(), LobbyEvent.ID.MEMBER_JOIN);
         assertEquals(joinEvent.getLobbyUri(), lobby.getUri());
         assertEquals(((UserDTO) (joinEvent.getData().get("memberData"))).getUuid(), newUser.getUuid());
 
-        EventMessage receiveLobbyDataMessage = response.get(1);
-        assertEquals(receiveLobbyDataMessage.getCategory(), Category.LOBBY);
-        assertEquals(receiveLobbyDataMessage.getRecipientUuids(), Collections.singletonList(newUser.getUuid()));
-
-        LobbyEvent receiveLobbyDataEvent = (LobbyEvent) receiveLobbyDataMessage.getEvent();
+        LobbyEvent receiveLobbyDataEvent = (LobbyEvent) events.get(1);
+        assertEquals(receiveLobbyDataEvent.getCategory(), Category.LOBBY);
+        assertEquals(receiveLobbyDataEvent.getRecipientUuids(), Collections.singletonList(newUser.getUuid()));
         assertEquals(receiveLobbyDataEvent.getId(), LobbyEvent.ID.RECEIVE_LOBBY_DATA);
         LobbyDTO lobbyData = (LobbyDTO) receiveLobbyDataEvent.getData().get("lobbyData");
         assertEquals(lobbyData.getUri(), lobby.getUri());
@@ -228,9 +211,8 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri());
         Action action = new Action("USER_LEAVE", Category.LOBBY, data, lobbyOwner);
 
-        List<EventMessage> messages = actionHandlerService.handleAction(action);
-
-        assertEquals(messages.size(), 0);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
+        assertEquals(events.size(), 0);
     }
 
     @Test
@@ -243,24 +225,20 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri());
         Action action = new Action("USER_LEAVE", Category.LOBBY, data, lobbyOwner);
 
-        List<EventMessage> messages = actionHandlerService.handleAction(action);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
 
-        assertEquals(messages.size(), 2);
+        assertEquals(events.size(), 2);
 
-        EventMessage ownerUpdatedMessage = messages.get(0);
-        assertEquals(ownerUpdatedMessage.getCategory(), Category.LOBBY);
-        assertEquals(ownerUpdatedMessage.getRecipientUuids(), lobby.getMembers().stream().map(OrpsUserDetails::getUuid).collect(Collectors.toList()));
-
-        LobbyEvent ownerUpdatedEvent = (LobbyEvent) ownerUpdatedMessage.getEvent();
+        LobbyEvent ownerUpdatedEvent = (LobbyEvent) events.get(0);
+        assertEquals(ownerUpdatedEvent.getCategory(), Category.LOBBY);
+        assertEquals(ownerUpdatedEvent.getRecipientUuids(), lobby.getMembers().stream().map(OrpsUserDetails::getUuid).collect(Collectors.toList()));
         assertEquals(ownerUpdatedEvent.getId(), LobbyEvent.ID.OWNER_UPDATED);
         assertEquals(ownerUpdatedEvent.getLobbyUri(), lobby.getUri());
         assertEquals(ownerUpdatedEvent.getData().get("newOwnerUuid"), newUser.getUuid());
 
-        EventMessage memberLeaveMessage = messages.get(1);
-        assertEquals(memberLeaveMessage.getCategory(), Category.LOBBY);
-        assertEquals(memberLeaveMessage.getRecipientUuids(), lobby.getMembers().stream().map(OrpsUserDetails::getUuid).collect(Collectors.toList()));
-
-        LobbyEvent memberLeaveEvent = (LobbyEvent) memberLeaveMessage.getEvent();
+        LobbyEvent memberLeaveEvent = (LobbyEvent) events.get(1);
+        assertEquals(memberLeaveEvent.getCategory(), Category.LOBBY);
+        assertEquals(memberLeaveEvent.getRecipientUuids(), lobby.getMembers().stream().map(OrpsUserDetails::getUuid).collect(Collectors.toList()));
         assertEquals(memberLeaveEvent.getId(), LobbyEvent.ID.MEMBER_LEAVE);
         assertEquals(memberLeaveEvent.getLobbyUri(), lobby.getUri());
         assertEquals(memberLeaveEvent.getData().get("memberUuid"), lobbyOwner.getUuid());
@@ -278,27 +256,23 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri(), "memberToKickUuid", "randomuuid");
         Action action = new Action("MEMBER_KICK", Category.LOBBY, data, lobbyOwner);
 
-        List<EventMessage> messages = actionHandlerService.handleAction(action);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
 
-        assertEquals(messages.size(), 2);
+        assertEquals(events.size(), 2);
 
-        EventMessage memberKickMessage = messages.get(0);
-        assertEquals(memberKickMessage.getCategory(), Category.LOBBY);
-        assertEquals(memberKickMessage.getRecipientUuids(), lobby.getMembers().stream()
+        LobbyEvent memberKickEvent = (LobbyEvent) events.get(0);
+        assertEquals(memberKickEvent.getCategory(), Category.LOBBY);
+        assertEquals(memberKickEvent.getRecipientUuids(), lobby.getMembers().stream()
                 .map(OrpsUserDetails::getUuid)
                 .filter(uuid -> !uuid.equals("randomuuid"))
                 .collect(Collectors.toList()));
-
-        LobbyEvent memberKickEvent = (LobbyEvent) memberKickMessage.getEvent();
         assertEquals(memberKickEvent.getId(), LobbyEvent.ID.MEMBER_KICK);
         assertEquals(memberKickEvent.getLobbyUri(), lobby.getUri());
         assertEquals(memberKickEvent.getData().get("memberUuid"), "randomuuid");
 
-        EventMessage gotKickedMessage = messages.get(1);
-        assertEquals(gotKickedMessage.getCategory(), Category.LOBBY);
-        assertEquals(gotKickedMessage.getRecipientUuids(), Collections.singletonList("randomuuid"));
-
-        LobbyEvent gotKickedEvent = (LobbyEvent) gotKickedMessage.getEvent();
+        LobbyEvent gotKickedEvent = (LobbyEvent) events.get(1);
+        assertEquals(gotKickedEvent.getCategory(), Category.LOBBY);
+        assertEquals(gotKickedEvent.getRecipientUuids(), Collections.singletonList("randomuuid"));
         assertEquals(gotKickedEvent.getId(), LobbyEvent.ID.GOT_KICKED);
         assertEquals(gotKickedEvent.getLobbyUri(), lobby.getUri());
 
@@ -315,16 +289,14 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri(), "memberToKickUuid", lobbyOwner.getUuid());
         Action action = new Action("MEMBER_KICK", Category.LOBBY, data, newUser);
 
-        List<EventMessage> messages = actionHandlerService.handleAction(action);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
 
-        assertEquals(messages.size(), 1);
+        assertEquals(events.size(), 1);
 
-        EventMessage message = messages.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), Collections.singletonList(newUser.getUuid()));
+        Event<?> event = events.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), Collections.singletonList(newUser.getUuid()));
 
-        ErrorEvent event = (ErrorEvent) message.getEvent();
-        assertEquals(event.getId(), ErrorEvent.ID.INSUFFICIENT_PERMISSIONS);
         assertEquals(event.getData().get("lobbyUri"), lobby.getUri());
 
         assertEquals(lobby.getMembers().size(), 2);
@@ -335,16 +307,14 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri(), "memberToKickUuid", "nonexistantuuid");
         Action action = new Action("MEMBER_KICK", Category.LOBBY, data, lobbyOwner);
 
-        List<EventMessage> messages = actionHandlerService.handleAction(action);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
 
-        assertEquals(messages.size(), 1);
+        assertEquals(events.size(), 1);
 
-        EventMessage message = messages.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
+        Event<?> event = events.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
 
-        ErrorEvent event = (ErrorEvent) message.getEvent();
-        assertEquals(event.getId(), ErrorEvent.ID.USER_NOT_IN_LOBBY);
         assertEquals(event.getData().get("lobbyUri"), lobby.getUri());
         assertEquals(event.getData().get("userUuid"), "nonexistantuuid");
     }
@@ -354,16 +324,14 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri());
         Action action = new Action("MEMBER_KICK", Category.LOBBY, data, lobbyOwner);
 
-        List<EventMessage> messages = actionHandlerService.handleAction(action);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
 
-        assertEquals(messages.size(), 1);
+        assertEquals(events.size(), 1);
 
-        EventMessage message = messages.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
+        Event<?> event = events.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
 
-        ErrorEvent event = (ErrorEvent) message.getEvent();
-        assertEquals(event.getId(), ErrorEvent.ID.DATA_FIELD_MISSING);
         assertEquals(event.getData().get("fieldName"), "memberToKickUuid");
     }
 
@@ -376,18 +344,27 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri());
         Action action = new Action("START_GAME", Category.LOBBY, data, lobbyOwner);
 
-        List<EventMessage> messages = actionHandlerService.handleAction(action);
+        ActionHandlerResponse response = actionDispatcherService.handleAction(action);
+        List<Event<?>> events = response.getEvents();
 
-        assertEquals(messages.size(), 1);
+        assertEquals(events.size(), 1);
 
-        EventMessage gameDataMessage = messages.get(0);
-        assertEquals(gameDataMessage.getCategory(), Category.LOBBY);
-        assertEquals(gameDataMessage.getRecipientUuids(), lobby.getMembers().stream().map(OrpsUserDetails::getUuid).collect(Collectors.toList()));
-
-        LobbyEvent gameCreatedEvent = (LobbyEvent) gameDataMessage.getEvent();
+        LobbyEvent gameCreatedEvent = (LobbyEvent) events.get(0);
+        assertEquals(gameCreatedEvent.getCategory(), Category.LOBBY);
+        assertEquals(gameCreatedEvent.getRecipientUuids(), lobby.getMembers().stream().map(OrpsUserDetails::getUuid).collect(Collectors.toList()));
         assertEquals(gameCreatedEvent.getId(), LobbyEvent.ID.CREATED_GAME);
         assertEquals(gameCreatedEvent.getLobbyUri(), lobby.getUri());
-        assertTrue(gameCreatedEvent.getData().get("gameData") instanceof GameDTO);
+        GameDTO gameDTO = (GameDTO) gameCreatedEvent.getData().get("gameData");
+
+        List<ScheduledAction> scheduledActions = response.getScheduledActions();
+
+        assertEquals(scheduledActions.size(), 1);
+        ScheduledAction scheduledAction = scheduledActions.get(0);
+
+        assertEquals(scheduledAction.getAction().getIdString(), "UPDATE_COUNTDOWN");
+        assertEquals(scheduledAction.getAction().getDataByKey("gameUri").get(), gameDTO.getUri());
+        assertTrue(scheduledAction.getAction() instanceof ServerAction);
+        // TODO also test execution time
     }
 
     @Test
@@ -397,16 +374,14 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri());
         Action action = new Action("START_GAME", Category.LOBBY, data, lobbyOwner);
 
-        List<EventMessage> messages = actionHandlerService.handleAction(action);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
 
-        assertEquals(messages.size(), 1);
+        assertEquals(events.size(), 1);
 
-        EventMessage message = messages.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
+        Event<?> event = events.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
 
-        ErrorEvent event = (ErrorEvent) message.getEvent();
-        assertEquals(event.getId(), ErrorEvent.ID.INSUFFICIENT_PLAYERS);
         assertEquals(event.getData().get("lobbyUri"), lobby.getUri());
     }
 
@@ -420,16 +395,14 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri());
         Action action = new Action("START_GAME", Category.LOBBY, data, lobbyOwner);
 
-        List<EventMessage> messages = actionHandlerService.handleAction(action);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
 
-        assertEquals(messages.size(), 1);
+        assertEquals(events.size(), 1);
 
-        EventMessage message = messages.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
+        Event<?> event = events.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
 
-        ErrorEvent event = (ErrorEvent) message.getEvent();
-        assertEquals(event.getId(), ErrorEvent.ID.LOBBY_GAME_ALREADY_STARTED);
         assertEquals(event.getData().get("lobbyUri"), lobby.getUri());
     }
 
@@ -442,16 +415,14 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri());
         Action action = new Action("START_GAME", Category.LOBBY, data, newUser);
 
-        List<EventMessage> messages = actionHandlerService.handleAction(action);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
 
-        assertEquals(messages.size(), 1);
+        assertEquals(events.size(), 1);
 
-        EventMessage message = messages.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), Collections.singletonList(newUser.getUuid()));
+        Event<?> event = events.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), Collections.singletonList(newUser.getUuid()));
 
-        ErrorEvent event = (ErrorEvent) message.getEvent();
-        assertEquals(event.getId(), ErrorEvent.ID.INSUFFICIENT_PERMISSIONS);
         assertEquals(event.getData().get("lobbyUri"), lobby.getUri());
     }
 
@@ -460,15 +431,13 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri(), "settingName", "inviteOnly", "settingValue", "true");
         Action action = new Action("UPDATE_SETTINGS", Category.LOBBY, data, lobbyOwner);
 
-        List<EventMessage> messages = actionHandlerService.handleAction(action);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
 
-        assertEquals(messages.size(), 1);
+        assertEquals(events.size(), 1);
 
-        EventMessage message = messages.get(0);
-        assertEquals(message.getCategory(), Category.LOBBY);
-        assertEquals(message.getRecipientUuids(), lobby.getMembers().stream().map(OrpsUserDetails::getUuid).collect(Collectors.toList()));
-
-        LobbyEvent event = (LobbyEvent) message.getEvent();
+        LobbyEvent event = (LobbyEvent) events.get(0);
+        assertEquals(event.getCategory(), Category.LOBBY);
+        assertEquals(event.getRecipientUuids(), lobby.getMembers().stream().map(OrpsUserDetails::getUuid).collect(Collectors.toList()));
         assertEquals(event.getId(), LobbyEvent.ID.SETTINGS_UPDATED);
         assertEquals(event.getLobbyUri(), lobby.getUri());
         assertEquals(event.getData().get("settingName"), "inviteOnly");
@@ -482,15 +451,13 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri(), "settingName", "timeForMove", "settingValue", "10");
         Action action = new Action("UPDATE_SETTINGS", Category.LOBBY, data, lobbyOwner);
 
-        List<EventMessage> messages = actionHandlerService.handleAction(action);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
 
-        assertEquals(messages.size(), 1);
+        assertEquals(events.size(), 1);
 
-        EventMessage message = messages.get(0);
-        assertEquals(message.getCategory(), Category.LOBBY);
-        assertEquals(message.getRecipientUuids(), lobby.getMembers().stream().map(OrpsUserDetails::getUuid).collect(Collectors.toList()));
-
-        LobbyEvent event = (LobbyEvent) message.getEvent();
+        LobbyEvent event = (LobbyEvent) events.get(0);
+        assertEquals(event.getCategory(), Category.LOBBY);
+        assertEquals(event.getRecipientUuids(), lobby.getMembers().stream().map(OrpsUserDetails::getUuid).collect(Collectors.toList()));
         assertEquals(event.getId(), LobbyEvent.ID.SETTINGS_UPDATED);
         assertEquals(event.getLobbyUri(), lobby.getUri());
         assertEquals(event.getData().get("settingName"), "timeForMove");
@@ -504,15 +471,13 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri(), "settingName", "scoreGoal", "settingValue", "44");
         Action action = new Action("UPDATE_SETTINGS", Category.LOBBY, data, lobbyOwner);
 
-        List<EventMessage> messages = actionHandlerService.handleAction(action);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
 
-        assertEquals(messages.size(), 1);
+        assertEquals(events.size(), 1);
 
-        EventMessage message = messages.get(0);
-        assertEquals(message.getCategory(), Category.LOBBY);
-        assertEquals(message.getRecipientUuids(), lobby.getMembers().stream().map(OrpsUserDetails::getUuid).collect(Collectors.toList()));
-
-        LobbyEvent event = (LobbyEvent) message.getEvent();
+        LobbyEvent event = (LobbyEvent) events.get(0);
+        assertEquals(event.getCategory(), Category.LOBBY);
+        assertEquals(event.getRecipientUuids(), lobby.getMembers().stream().map(OrpsUserDetails::getUuid).collect(Collectors.toList()));
         assertEquals(event.getId(), LobbyEvent.ID.SETTINGS_UPDATED);
         assertEquals(event.getLobbyUri(), lobby.getUri());
         assertEquals(event.getData().get("settingName"), "scoreGoal");
@@ -526,16 +491,14 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri(), "settingValue", "44");
         Action action = new Action("UPDATE_SETTINGS", Category.LOBBY, data, lobbyOwner);
 
-        List<EventMessage> messages = actionHandlerService.handleAction(action);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
 
-        assertEquals(messages.size(), 1);
+        assertEquals(events.size(), 1);
 
-        EventMessage message = messages.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
+        Event<?> event = events.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
 
-        ErrorEvent event = (ErrorEvent) message.getEvent();
-        assertEquals(event.getId(), ErrorEvent.ID.DATA_FIELD_MISSING);
         assertEquals(event.getData().get("fieldName"), "settingName");
     }
 
@@ -544,16 +507,14 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri(), "settingName", "inviteOnly");
         Action action = new Action("UPDATE_SETTINGS", Category.LOBBY, data, lobbyOwner);
 
-        List<EventMessage> messages = actionHandlerService.handleAction(action);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
 
-        assertEquals(messages.size(), 1);
+        assertEquals(events.size(), 1);
 
-        EventMessage message = messages.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
+        Event<?> event = events.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
 
-        ErrorEvent event = (ErrorEvent) message.getEvent();
-        assertEquals(event.getId(), ErrorEvent.ID.DATA_FIELD_MISSING);
         assertEquals(event.getData().get("fieldName"), "settingValue");
     }
 
@@ -564,16 +525,14 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri(), "settingName", "inviteOnly", "settingValue", "true");
         Action action = new Action("UPDATE_SETTINGS", Category.LOBBY, data, newUser);
 
-        List<EventMessage> messages = actionHandlerService.handleAction(action);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
 
-        assertEquals(messages.size(), 1);
+        assertEquals(events.size(), 1);
 
-        EventMessage message = messages.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), Collections.singletonList(newUser.getUuid()));
+        Event<?> event = events.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), Collections.singletonList(newUser.getUuid()));
 
-        ErrorEvent event = (ErrorEvent) message.getEvent();
-        assertEquals(event.getId(), ErrorEvent.ID.INSUFFICIENT_PERMISSIONS);
         assertEquals(event.getData().get("lobbyUri"), lobby.getUri());
     }
 
@@ -582,16 +541,14 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri(), "settingName", "inviteOnly", "settingValue", "123");
         Action action = new Action("UPDATE_SETTINGS", Category.LOBBY, data, lobbyOwner);
 
-        List<EventMessage> messages = actionHandlerService.handleAction(action);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
 
-        assertEquals(messages.size(), 1);
+        assertEquals(events.size(), 1);
 
-        EventMessage message = messages.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
+        Event<?> event = events.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
 
-        ErrorEvent event = (ErrorEvent) message.getEvent();
-        assertEquals(event.getId(), ErrorEvent.ID.INVALID_FIELD_DATA_TYPE);
         assertEquals(event.getData().get("fieldName"), "inviteOnly");
         assertEquals(event.getData().get("expectedType"), "boolean string (\"true\" or \"false\")");
     }
@@ -602,16 +559,14 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri(), "settingName", "timeForMove", "settingValue", "ff");
         Action action = new Action("UPDATE_SETTINGS", Category.LOBBY, data, lobbyOwner);
 
-        List<EventMessage> messages = actionHandlerService.handleAction(action);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
 
-        assertEquals(messages.size(), 1);
+        assertEquals(events.size(), 1);
 
-        EventMessage message = messages.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
+        Event<?> event = events.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
 
-        ErrorEvent event = (ErrorEvent) message.getEvent();
-        assertEquals(event.getId(), ErrorEvent.ID.INVALID_FIELD_DATA_TYPE);
         assertEquals(event.getData().get("fieldName"), "timeForMove");
         assertEquals(event.getData().get("expectedType"), "unsigned int");
 
@@ -619,16 +574,14 @@ public class LobbyTests {
         Map<String, String> data2 = Map.of("lobbyUri", lobby.getUri(), "settingName", "timeForMove", "settingValue", "2");
         Action action2 = new Action("UPDATE_SETTINGS", Category.LOBBY, data2, lobbyOwner);
 
-        List<EventMessage> messages2 = actionHandlerService.handleAction(action2);
+        List<Event<?>> events2 = actionDispatcherService.handleAction(action2).getEvents();
 
-        assertEquals(messages2.size(), 1);
+        assertEquals(events2.size(), 1);
 
-        EventMessage message2 = messages2.get(0);
-        assertEquals(message2.getCategory(), Category.ERROR);
-        assertEquals(message2.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
+        Event<?> event2 = events2.get(0);
+        assertEquals(event2.getCategory(), Category.ERROR);
+        assertEquals(event2.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
 
-        ErrorEvent event2 = (ErrorEvent) message2.getEvent();
-        assertEquals(event2.getId(), ErrorEvent.ID.LOBBY_PARAMETER_VALUE_NOT_ALLOWED);
         assertEquals(event2.getData().get("lobbyUri"), lobby.getUri());
         assertEquals(event2.getData().get("message"), "Time for move value must be in range 3 <= n <= 10");
 
@@ -636,16 +589,14 @@ public class LobbyTests {
         Map<String, String> data3 = Map.of("lobbyUri", lobby.getUri(), "settingName", "timeForMove", "settingValue", "11");
         Action action3 = new Action("UPDATE_SETTINGS", Category.LOBBY, data3, lobbyOwner);
 
-        List<EventMessage> messages3 = actionHandlerService.handleAction(action3);
+        List<Event<?>> events3 = actionDispatcherService.handleAction(action3).getEvents();
 
-        assertEquals(messages3.size(), 1);
+        assertEquals(events3.size(), 1);
 
-        EventMessage message3 = messages3.get(0);
-        assertEquals(message3.getCategory(), Category.ERROR);
-        assertEquals(message3.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
+        Event<?> event3 = events3.get(0);
+        assertEquals(event3.getCategory(), Category.ERROR);
+        assertEquals(event3.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
 
-        ErrorEvent event3 = (ErrorEvent) message3.getEvent();
-        assertEquals(event3.getId(), ErrorEvent.ID.LOBBY_PARAMETER_VALUE_NOT_ALLOWED);
         assertEquals(event3.getData().get("lobbyUri"), lobby.getUri());
         assertEquals(event3.getData().get("message"), "Time for move value must be in range 3 <= n <= 10");
     }
@@ -655,16 +606,14 @@ public class LobbyTests {
         Map<String, String> data = Map.of("lobbyUri", lobby.getUri(), "settingName", "scoreGoal", "settingValue", "ff");
         Action action = new Action("UPDATE_SETTINGS", Category.LOBBY, data, lobbyOwner);
 
-        List<EventMessage> messages = actionHandlerService.handleAction(action);
+        List<Event<?>> events = actionDispatcherService.handleAction(action).getEvents();
 
-        assertEquals(messages.size(), 1);
+        assertEquals(events.size(), 1);
 
-        EventMessage message = messages.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
+        Event<?> event = events.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
 
-        ErrorEvent event = (ErrorEvent) message.getEvent();
-        assertEquals(event.getId(), ErrorEvent.ID.INVALID_FIELD_DATA_TYPE);
         assertEquals(event.getData().get("fieldName"), "scoreGoal");
         assertEquals(event.getData().get("expectedType"), "unsigned int");
 
@@ -672,16 +621,14 @@ public class LobbyTests {
         Map<String, String> data2 = Map.of("lobbyUri", lobby.getUri(), "settingName", "scoreGoal", "settingValue", "0");
         Action action2 = new Action("UPDATE_SETTINGS", Category.LOBBY, data2, lobbyOwner);
 
-        List<EventMessage> messages2 = actionHandlerService.handleAction(action2);
+        List<Event<?>> events2 = actionDispatcherService.handleAction(action2).getEvents();
 
-        assertEquals(messages2.size(), 1);
+        assertEquals(events2.size(), 1);
 
-        EventMessage message2 = messages2.get(0);
-        assertEquals(message2.getCategory(), Category.ERROR);
-        assertEquals(message2.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
+        Event<?> event2 = events2.get(0);
+        assertEquals(event2.getCategory(), Category.ERROR);
+        assertEquals(event2.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
 
-        ErrorEvent event2 = (ErrorEvent) message2.getEvent();
-        assertEquals(event2.getId(), ErrorEvent.ID.LOBBY_PARAMETER_VALUE_NOT_ALLOWED);
         assertEquals(event2.getData().get("lobbyUri"), lobby.getUri());
         assertEquals(event2.getData().get("message"), "Score goal value must be in range 1 <= n <= 50");
 
@@ -689,16 +636,14 @@ public class LobbyTests {
         Map<String, String> data3 = Map.of("lobbyUri", lobby.getUri(), "settingName", "scoreGoal", "settingValue", "51");
         Action action3 = new Action("UPDATE_SETTINGS", Category.LOBBY, data3, lobbyOwner);
 
-        List<EventMessage> messages3 = actionHandlerService.handleAction(action3);
+        List<Event<?>> events3 = actionDispatcherService.handleAction(action3).getEvents();
 
-        assertEquals(messages3.size(), 1);
+        assertEquals(events3.size(), 1);
 
-        EventMessage message3 = messages3.get(0);
-        assertEquals(message3.getCategory(), Category.ERROR);
-        assertEquals(message3.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
+        Event<?> event3 = events3.get(0);
+        assertEquals(event3.getCategory(), Category.ERROR);
+        assertEquals(event3.getRecipientUuids(), Collections.singletonList(lobbyOwner.getUuid()));
 
-        ErrorEvent event3 = (ErrorEvent) message3.getEvent();
-        assertEquals(event3.getId(), ErrorEvent.ID.LOBBY_PARAMETER_VALUE_NOT_ALLOWED);
         assertEquals(event3.getData().get("lobbyUri"), lobby.getUri());
         assertEquals(event3.getData().get("message"), "Score goal value must be in range 1 <= n <= 50");
     }

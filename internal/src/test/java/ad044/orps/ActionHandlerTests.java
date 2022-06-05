@@ -3,9 +3,9 @@ package ad044.orps;
 import ad044.orps.model.Category;
 import ad044.orps.model.action.Action;
 import ad044.orps.model.event.ErrorEvent;
-import ad044.orps.model.message.EventMessage;
+import ad044.orps.model.event.Event;
 import ad044.orps.model.user.OrpsUserDetails;
-import ad044.orps.service.ActionHandlerService;
+import ad044.orps.service.ActionDispatcherService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @SpringBootTest
 public class ActionHandlerTests {
     @Autowired
-    ActionHandlerService actionHandlerService;
+    ActionDispatcherService actionDispatcherService;
 
     OrpsUserDetails author;
 
@@ -33,14 +33,12 @@ public class ActionHandlerTests {
     public void generalAction_failsWhenInvalidAction() {
         Action action = new Action("123", Category.GENERAL, Collections.emptyMap(), author);
 
-        List<EventMessage> response = actionHandlerService.handleAction(action);
+        List<Event<?>> response = actionDispatcherService.handleAction(action).getEvents();
         assertEquals(response.size(), 1);
 
-        EventMessage message = response.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), List.of(author.getUuid()));
-
-        ErrorEvent event = (ErrorEvent) message.getEvent();
+        Event<?> event = response.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), List.of(author.getUuid()));
         assertEquals(event.getId(), ErrorEvent.ID.INVALID_ACTION);
         assertEquals(event.getData().get("category"), "GENERAL");
         assertEquals(event.getData().get("action"), "123");
@@ -50,14 +48,12 @@ public class ActionHandlerTests {
     public void lobbyAction_failsWhenInvalidAction() {
         Action action = new Action("123", Category.LOBBY, Map.of("lobbyUri", "test"), author);
 
-        List<EventMessage> response = actionHandlerService.handleAction(action);
+        List<Event<?>> response = actionDispatcherService.handleAction(action).getEvents();
         assertEquals(response.size(), 1);
 
-        EventMessage message = response.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), List.of(author.getUuid()));
-
-        ErrorEvent event = (ErrorEvent) message.getEvent();
+        Event<?> event = response.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), List.of(author.getUuid()));
         assertEquals(event.getId(), ErrorEvent.ID.INVALID_ACTION);
         assertEquals(event.getData().get("category"), "LOBBY");
         assertEquals(event.getData().get("action"), "123");
@@ -67,14 +63,12 @@ public class ActionHandlerTests {
     public void gameAction_failsWhenInvalidAction() {
         Action action = new Action("123", Category.GAME, Map.of("gameUri", "test"), author);
 
-        List<EventMessage> response = actionHandlerService.handleAction(action);
+        List<Event<?>> response = actionDispatcherService.handleAction(action).getEvents();
         assertEquals(response.size(), 1);
 
-        EventMessage message = response.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), List.of(author.getUuid()));
-
-        ErrorEvent event = (ErrorEvent) message.getEvent();
+        Event<?> event = response.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), List.of(author.getUuid()));
         assertEquals(event.getId(), ErrorEvent.ID.INVALID_ACTION);
         assertEquals(event.getData().get("category"), "GAME");
         assertEquals(event.getData().get("action"), "123");
@@ -84,14 +78,12 @@ public class ActionHandlerTests {
     public void gameAction_failsWhenNoGameUri() {
         Action action = new Action("SUBMIT_MOVE", Category.GAME, Collections.emptyMap(), author);
 
-        List<EventMessage> response = actionHandlerService.handleAction(action);
+        List<Event<?>> response = actionDispatcherService.handleAction(action).getEvents();
         assertEquals(response.size(), 1);
 
-        EventMessage message = response.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), List.of(author.getUuid()));
-
-        ErrorEvent event = (ErrorEvent) message.getEvent();
+        Event<?> event = response.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), List.of(author.getUuid()));
         assertEquals(event.getId(), ErrorEvent.ID.DATA_FIELD_MISSING);
         assertEquals(event.getData().get("fieldName"), "gameUri");
     }
@@ -100,14 +92,12 @@ public class ActionHandlerTests {
     public void lobbyAction_failsWhenNoLobbyUri() {
         Action action = new Action("ADD_BOT", Category.LOBBY, Collections.emptyMap(), author);
 
-        List<EventMessage> response = actionHandlerService.handleAction(action);
+        List<Event<?>> response = actionDispatcherService.handleAction(action).getEvents();
         assertEquals(response.size(), 1);
 
-        EventMessage message = response.get(0);
-        assertEquals(message.getCategory(), Category.ERROR);
-        assertEquals(message.getRecipientUuids(), List.of(author.getUuid()));
-
-        ErrorEvent event = (ErrorEvent) message.getEvent();
+        Event<?> event = response.get(0);
+        assertEquals(event.getCategory(), Category.ERROR);
+        assertEquals(event.getRecipientUuids(), List.of(author.getUuid()));
         assertEquals(event.getId(), ErrorEvent.ID.DATA_FIELD_MISSING);
         assertEquals(event.getData().get("fieldName"), "lobbyUri");
     }
